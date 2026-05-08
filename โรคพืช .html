@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlantCare AI Dashboard & PDF</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; }
+        .progress-bar { transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen pb-10">
+
+    <div class="max-w-2xl mx-auto space-y-6 p-4">
+        
+        <section id="inputSection" class="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 transition-all">
+            <div class="text-center mb-8">
+                <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-leaf text-green-600 text-3xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-800">PlantCare AI</h1>
+                <p class="text-slate-500">ใส่ข้อมูลพืชเพื่อเริ่มการวิเคราะห์</p>
+            </div>
+
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">ชื่อพืช / รหัสแปลง</label>
+                    <input type="text" id="plantName" placeholder="ระบุชื่อพืช..." 
+                           class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-green-500 outline-none transition">
+                </div>
+                
+                <input type="file" id="imageUpload" accept="image/*" class="hidden" onchange="handlePreview(this)">
+                <label for="imageUpload" class="flex flex-col items-center justify-center w-full h-56 border-2 border-dashed border-slate-300 rounded-3xl cursor-pointer hover:bg-green-50 hover:border-green-400 transition group">
+                    <img id="imagePreview" class="hidden w-full h-full object-cover rounded-3xl">
+                    <div id="placeholder" class="text-slate-400 text-center group-hover:text-green-600">
+                        <i class="fas fa-cloud-upload-alt text-4xl mb-3"></i>
+                        <p class="font-medium text-lg">แตะเพื่ออัปโหลดรูปภาพ</p>
+                        <p class="text-sm">รองรับ JPG, PNG และถ่ายจากกล้อง</p>
+                    </div>
+                </label>
+
+                <button onclick="runAnalysis()" id="btnAnalyze" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-2xl shadow-lg transform active:scale-95 transition-all text-lg flex items-center justify-center gap-3">
+                    <i class="fas fa-wand-magic-sparkles"></i> วิเคราะห์ทันที
+                </button>
+            </div>
+        </section>
+
+        <section id="resultSection" class="hidden space-y-4">
+            <div class="flex gap-2">
+                <button onclick="resetApp()" class="flex-1 bg-white text-slate-600 font-bold py-3 rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 flex items-center justify-center gap-2">
+                    <i class="fas fa-arrow-left"></i> กลับไปโหลดรูปใหม่
+                </button>
+                <button onclick="downloadPDF()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-700 flex items-center justify-center gap-2">
+                    <i class="fas fa-file-pdf"></i> ส่งออกเป็น PDF
+                </button>
+            </div>
+
+            <div id="pdfContent" class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-8 bg-slate-900 text-white flex justify-between items-start">
+                    <div>
+                        <h2 id="outPlantName" class="text-2xl font-bold">ชื่อพืช</h2>
+                        <p class="text-slate-400 text-sm mt-1">วันที่วิเคราะห์: <span id="currentDate"></span></p>
+                    </div>
+                    <div id="outBadge" class="px-4 py-1.5 rounded-full text-xs font-black bg-red-500">วิกฤต</div>
+                </div>
+
+                <div class="p-8 space-y-8">
+                    <div>
+                        <div class="flex justify-between items-end mb-3">
+                            <div>
+                                <p class="text-slate-500 text-xs uppercase font-bold tracking-widest">สถานะสุขภาพ</p>
+                                <h3 id="outDiseaseName" class="text-xl font-bold text-slate-800">โรคใบจุดมะนาว</h3>
+                            </div>
+                            <span id="outSeverityText" class="text-3xl font-black text-red-500">85%</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-5 rounded-full overflow-hidden border">
+                            <div id="outSeverityBar" class="progress-bar h-full bg-red-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-slate-100">
+                        <h4 class="font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-clipboard-check text-green-600"></i> แนวทางการจัดการพืช
+                        </h4>
+                        
+                        <div class="grid grid-cols-1 gap-3 text-sm">
+                            <div class="p-4 bg-orange-50 border-l-4 border-orange-400 rounded-r-xl">
+                                <p class="font-bold text-orange-800 mb-1">ระยะสั้น (แก้ไขทันที):</p>
+                                <p id="treatShort" class="text-orange-700">-</p>
+                            </div>
+                            <div class="p-4 bg-green-50 border-l-4 border-green-400 rounded-r-xl">
+                                <p class="font-bold text-green-800 mb-1">ระยะยาว (ป้องกัน):</p>
+                                <p id="treatLong" class="text-green-700">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // ฟังก์ชัน Preview รูป
+        function handlePreview(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = document.getElementById('imagePreview');
+                    img.src = e.target.result;
+                    img.classList.remove('hidden');
+                    document.getElementById('placeholder').classList.add('hidden');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // ฟังก์ชันวิเคราะห์
+        function runAnalysis() {
+            const name = document.getElementById('plantName').value || "พืชไม่ได้ระบุชื่อ";
+            const btn = document.getElementById('btnAnalyze');
+
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> กำลังวิเคราะห์ AI...';
+            
+            setTimeout(() => {
+                document.getElementById('inputSection').classList.add('hidden');
+                document.getElementById('resultSection').classList.remove('hidden');
+                showDashboard(name);
+                btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> วิเคราะห์ทันที';
+            }, 1200);
+        }
+
+        // แสดงผลแดชบอร์ด
+        function showDashboard(name) {
+            document.getElementById('outPlantName').innerText = name;
+            document.getElementById('currentDate').innerText = new Date().toLocaleDateString('th-TH');
+            
+            const score = 82; // จำลองคะแนน
+            document.getElementById('outSeverityText').innerText = score + '%';
+            document.getElementById('outSeverityBar').style.width = score + '%';
+            
+            // ใส่ข้อมูลคำแนะนำ
+            document.getElementById('treatShort').innerText = "ตัดแต่งกิ่งที่มีโรคและเผาทำลายทันที ฉีดพ่นสารคอปเปอร์ออกซีคลอไรด์";
+            document.getElementById('treatLong').innerText = "ปรับปรุงการให้น้ำโดยไม่ให้โดนใบ และบำรุงดินด้วยปุ๋ยโพแทสเซียมเพื่อสร้างความแข็งแรง";
+        }
+
+        // ฟังก์ชันส่งออก PDF
+        function downloadPDF() {
+            const element = document.getElementById('pdfContent');
+            const plantName = document.getElementById('outPlantName').innerText;
+            const opt = {
+                margin: 0.5,
+                filename: `รายงาน_${plantName}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+
+        // ฟังก์ชันเริ่มใหม่
+        function resetApp() {
+            document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('inputSection').classList.remove('hidden');
+            
+            // ล้างข้อมูลเดิม
+            document.getElementById('plantName').value = "";
+            document.getElementById('imageUpload').value = "";
+            document.getElementById('imagePreview').src = "";
+            document.getElementById('imagePreview').classList.add('hidden');
+            document.getElementById('placeholder').classList.remove('hidden');
+            document.getElementById('outSeverityBar').style.width = '0%';
+        }
+    </script>
+</body>
+</html>
