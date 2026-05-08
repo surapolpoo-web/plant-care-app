@@ -3,246 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PlantCare AI Dashboard</title>
+    <title>PlantCare AI Pro - ระบบวิเคราะห์พืชสวนครัวและพืชไร่</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap');
-        
-        :root {
-            --primary-green: #16a34a;
-        }
-
-        body { 
-            font-family: 'Sarabun', sans-serif; 
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        /* ปรับแต่งความลื่นไหลของ Progress Bar */
-        .progress-bar { 
-            transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); 
-        }
-
-        /* ตกแต่งส่วนที่จะพิมพ์เป็น PDF */
-        #pdfContent {
-            background: white;
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        /* ป้องกันปุ่มเบี้ยวบน iPad */
-        button {
-            touch-action: manipulation;
-        }
+        body { font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .progress-bar { transition: width 1.5s ease-in-out; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen">
+<body class="bg-slate-100 min-h-screen">
 
-    <div class="max-w-2xl mx-auto p-4 md:p-8">
+    <div class="max-w-2xl mx-auto p-4 md:p-6">
         
-        <section id="inputSection" class="bg-white p-8 rounded-[2rem] shadow-xl border border-slate-100">
-            <div class="text-center mb-10">
-                <div class="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
-                    <i class="fas fa-leaf text-green-600 text-4xl"></i>
+        <section id="inputSection" class="bg-white p-6 rounded-[2rem] shadow-xl border border-slate-200">
+            <div class="text-center mb-6">
+                <div class="bg-green-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 rotate-3 shadow-lg">
+                    <i class="fas fa-leaf text-white text-3xl"></i>
                 </div>
-                <h1 class="text-3xl font-black text-slate-800 tracking-tight">PlantCare AI</h1>
-                <p class="text-slate-500 mt-2">วิเคราะห์สุขภาพพืชด้วยระบบอัจฉริยะ</p>
+                <h1 class="text-2xl font-black text-slate-800">PlantCare AI Pro</h1>
+                <p class="text-slate-500 text-sm">เลือกชนิดพืชเพื่อผลการวิเคราะห์ที่ถูกต้อง</p>
             </div>
 
-            <div class="space-y-6">
+            <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-2 ml-1">ชื่อพืช หรือ หมายเลขแปลง</label>
-                    <input type="text" id="plantName" placeholder="เช่น มะนาวแป้น A1" 
-                           class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-green-500 focus:bg-white outline-none transition-all text-lg">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">1. เลือกกลุ่มพืช</label>
+                    <select id="plantCategory" onchange="updatePlantList()" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-green-500 outline-none text-lg">
+                        <option value="">-- กรุณาเลือกกลุ่ม --</option>
+                        <option value="vegetable">ผักสวนครัว (คะน้า, ผักชี, กะเพรา, ฯลฯ)</option>
+                        <option value="fruit">พืชสวน/ไม้ผล (ทุเรียน, มะม่วง, มะนาว)</option>
+                        <option value="field">พืชไร่ (ข้าว, มันสำปะหลัง, อ้อย)</option>
+                    </select>
                 </div>
-                
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">2. ระบุชนิดพืช</label>
+                    <select id="plantType" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-green-500 outline-none text-lg">
+                        <option value="">-- เลือกกลุ่มพืชก่อน --</option>
+                    </select>
+                </div>
+
                 <input type="file" id="imageUpload" accept="image/*" class="hidden" onchange="handlePreview(this)">
-                <label for="imageUpload" class="flex flex-col items-center justify-center w-full h-64 border-3 border-dashed border-slate-300 rounded-[2rem] cursor-pointer hover:bg-green-50 hover:border-green-400 transition-all group overflow-hidden relative">
+                <label for="imageUpload" class="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-300 rounded-[2rem] cursor-pointer hover:bg-green-50 transition-all overflow-hidden relative">
                     <img id="imagePreview" class="hidden w-full h-full object-cover">
-                    <div id="placeholder" class="text-slate-400 text-center group-hover:text-green-600 transition-colors">
-                        <i class="fas fa-camera text-5xl mb-4"></i>
-                        <p class="font-bold text-xl">ถ่ายภาพ/อัปโหลดรูปใบพืช</p>
-                        <p class="text-sm mt-1 opacity-70">รองรับภาพถ่ายจาก iPad/iPhone</p>
+                    <div id="placeholder" class="text-slate-400 text-center">
+                        <i class="fas fa-camera text-3xl mb-2"></i>
+                        <p class="font-bold">ถ่ายภาพ/อัปโหลดรูปใบ</p>
                     </div>
                 </label>
 
-                <button onclick="runAnalysis()" id="btnAnalyze" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-5 rounded-2xl shadow-lg shadow-green-200 transform active:scale-[0.98] transition-all text-xl flex items-center justify-center gap-3">
-                    <i class="fas fa-microscope"></i> เริ่มการวิเคราะห์
+                <button onclick="runAnalysis()" class="w-full bg-green-600 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all text-xl">
+                    เริ่มวิเคราะห์ข้อมูล
                 </button>
             </div>
         </section>
 
-        <section id="resultSection" class="hidden space-y-6">
-            <div class="flex gap-3">
-                <button onclick="resetApp()" class="flex-1 bg-white text-slate-600 font-bold py-4 rounded-2xl shadow-sm border border-slate-200 active:bg-slate-100 flex items-center justify-center gap-2">
-                    <i class="fas fa-redo"></i> วิเคราะห์ใหม่
-                </button>
-                <button onclick="downloadPDF()" class="flex-1 bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg active:bg-blue-700 flex items-center justify-center gap-2">
-                    <i class="fas fa-file-export"></i> ส่งออก PDF
-                </button>
+        <section id="resultSection" class="hidden space-y-4">
+            <div class="flex gap-2">
+                <button onclick="resetApp()" class="flex-1 bg-white text-slate-600 font-bold py-3 rounded-xl border border-slate-200 shadow-sm">วิเคราะห์ต้นใหม่</button>
+                <button onclick="downloadPDF()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md">ออกรายงาน PDF</button>
             </div>
 
-            <div id="pdfContent" class="rounded-[2rem] shadow-2xl border border-slate-200 overflow-hidden">
-                <div class="p-8 bg-slate-900 text-white flex justify-between items-center">
+            <div id="pdfContent" class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 bg-slate-900 text-white flex justify-between items-center">
                     <div>
-                        <h2 id="outPlantName" class="text-3xl font-bold italic">ชื่อพืช</h2>
-                        <p class="text-green-400 font-medium mt-1">รายงานสถานะโดย PlantCare AI</p>
+                        <h2 id="outPlantTitle" class="text-2xl font-bold">ชื่อพืช</h2>
+                        <p id="outDate" class="text-green-400 text-xs mt-1"></p>
                     </div>
-                    <div class="text-right text-xs opacity-60">
-                        วันที่วิเคราะห์: <br>
-                        <span id="currentDate" class="text-sm font-bold text-white"></span>
-                    </div>
+                    <i class="fas fa-check-circle text-3xl text-green-500"></i>
                 </div>
 
-                <div class="p-8 space-y-10">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div class="p-6 space-y-6">
+                    <div class="flex justify-between items-end">
                         <div>
-                            <p class="text-slate-400 text-xs uppercase font-black tracking-widest mb-1">Health Status</p>
-                            <h3 id="outDiseaseName" class="text-2xl font-bold text-slate-800">กำลังประมวลผล...</h3>
-                            <div id="outBadge" class="inline-block mt-2 px-4 py-1 rounded-full text-xs font-black uppercase text-white bg-red-500">
-                                วิกฤต
-                            </div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">สถานะสุขภาพ</p>
+                            <h3 id="outDisease" class="text-xl font-bold text-slate-800">ชื่อโรค</h3>
                         </div>
-                        <div class="text-center md:text-right">
-                            <span id="outSeverityText" class="text-6xl font-black text-red-500">0%</span>
-                            <p class="text-slate-400 text-xs font-bold uppercase">Severity Level</p>
+                        <div class="text-right">
+                            <span id="outSeverityText" class="text-4xl font-black text-red-500">0%</span>
                         </div>
                     </div>
 
-                    <div class="space-y-2">
-                        <div class="w-full bg-slate-100 h-8 rounded-full overflow-hidden p-1.5 border-2 border-slate-50 shadow-inner">
-                            <div id="outSeverityBar" class="progress-bar h-full rounded-full bg-gradient-to-r from-orange-400 to-red-600 shadow-md" style="width: 0%"></div>
-                        </div>
+                    <div class="w-full bg-slate-100 h-4 rounded-full overflow-hidden border">
+                        <div id="outBar" class="progress-bar h-full bg-gradient-to-r from-orange-400 to-red-600" style="width: 0%"></div>
                     </div>
 
                     <div class="grid grid-cols-1 gap-4">
-                        <div class="p-6 bg-orange-50 border-l-8 border-orange-500 rounded-2xl">
-                            <h4 class="font-bold text-orange-900 text-lg mb-2 flex items-center gap-2">
-                                <i class="fas fa-exclamation-triangle"></i> วิธีแก้ไขเร่งด่วน
+                        <div class="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl">
+                            <h4 class="text-sm font-bold text-red-900 mb-1 flex items-center gap-2">
+                                <i class="fas fa-tools"></i> การแก้ไขทันที:
                             </h4>
-                            <p id="treatShort" class="text-orange-800 leading-relaxed font-medium text-base">รอผลวิเคราะห์...</p>
+                            <p id="outShort" class="text-red-800 text-sm leading-relaxed"></p>
                         </div>
-                        <div class="p-6 bg-green-50 border-l-8 border-green-500 rounded-2xl">
-                            <h4 class="font-bold text-green-900 text-lg mb-2 flex items-center gap-2">
-                                <i class="fas fa-shield-alt"></i> การป้องกันระยะยาว
+                        <div class="p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-r-xl">
+                            <h4 class="text-sm font-bold text-emerald-900 mb-1 flex items-center gap-2">
+                                <i class="fas fa-shield-virus"></i> การป้องกัน:
                             </h4>
-                            <p id="treatLong" class="text-green-800 leading-relaxed font-medium text-base">รอผลวิเคราะห์...</p>
+                            <p id="outLong" class="text-emerald-800 text-sm leading-relaxed"></p>
                         </div>
                     </div>
-                </div>
-                
-                <div class="p-4 bg-slate-50 text-center text-[10px] text-slate-400 border-t uppercase tracking-tighter">
-                    Generated by PlantCare AI Mobile System &copy; 2024
                 </div>
             </div>
         </section>
     </div>
 
     <script>
-        // ระบบพรีวิวรูปภาพ
+        // ฐานข้อมูลพืชเพิ่มเติมตามคำขอ
+        const plantData = {
+            vegetable: [
+                { name: "คะน้า", disease: "โรคราน้ำค้าง (Downy Mildew)", short: "พ่นสารป้องกันกำจัดเชื้อรา เช่น แมนโคเซ็บ หรือ เมทาแลกซิล", long: "ไม่ปลูกคะน้าแน่นเกินไป เพื่อให้ลมพัดผ่านลดความชื้น" },
+                { name: "ผักชี", disease: "โรคใบไหม้/เน่าคอดิน", short: "ถอนต้นที่เน่าออกไปเผาทิ้ง ลดปริมาณการให้น้ำ", long: "ปรุงดินด้วยปูนขาวและตากดินก่อนปลูกเพื่อฆ่าเชื้อ" },
+                { name: "กะเพรา", disease: "โรคใบจุด (Leaf Spot)", short: "เด็ดใบที่เป็นโรคออก พ่นน้ำสกัดจากใบยาสูบหรือเชื้อบิวเวอเรีย", long: "ให้น้ำที่โคนต้น หลีกเลี่ยงการทำให้ใบเปียกชื้นนานๆ" },
+                { name: "โหระพา", disease: "โรคราน้ำค้าง", short: "ตัดแต่งกิ่งให้โปร่ง พ่นสารป้องกันเชื้อรากลุ่มคอปเปอร์", long: "ควรเปลี่ยนดินปลูกใหม่หากมีการระบาดซ้ำซ้อน" },
+                { name: "สะระแหน่", disease: "โรคราสนิม (Rust)", short: "ตัดกิ่งที่เป็นโรคทิ้งให้หมด พ่นด้วยน้ำปูนใส", long: "ไม่รดน้ำจนดินแฉะเกินไป และขยายพันธุ์ด้วยกิ่งที่สะอาด" }
+            ],
+            field: [
+                { name: "ข้าว", disease: "โรคไหม้ (Rice Blast)", short: "พ่นสารไตรไซคลาโซล หรือ บีม", long: "ไม่ใส่ปุ๋ยไนโตรเจนสูงเกินไป และใช้พันธุ์ข้าวที่ทนทานต่อโรค" },
+                { name: "มันสำปะหลัง", disease: "โรคพุ่มไม้ (Witches' Broom)", short: "ถอนทำลายต้นที่มียอดฝอยผิดปกติทิ้งทันที", long: "กำจัดแมลงพาหะ (เพลี้ยจักจั่น) และไม่นำท่อนพันธุ์จากต้นที่เป็นโรคมาปลูก" }
+            ],
+            fruit: [
+                { name: "มะนาว", disease: "โรคแคงเกอร์", short: "ตัดกิ่งเป็นโรคไปเผา พ่นคอปเปอร์ออกซีคลอไรด์", long: "ฉีดพ่นสารกำจัดหนอนชอนใบที่เป็นตัวนำโรค" }
+            ]
+        };
+
+        function updatePlantList() {
+            const cat = document.getElementById('plantCategory').value;
+            const typeSelect = document.getElementById('plantType');
+            typeSelect.innerHTML = '<option value="">-- เลือกชนิดพืช --</option>';
+            if (cat && plantData[cat]) {
+                plantData[cat].forEach((p, index) => {
+                    typeSelect.innerHTML += `<option value="${index}">${p.name}</option>`;
+                });
+            }
+        }
+
         function handlePreview(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = e => {
-                    const img = document.getElementById('imagePreview');
-                    img.src = e.target.result;
-                    img.classList.remove('hidden');
+                    document.getElementById('imagePreview').src = e.target.result;
+                    document.getElementById('imagePreview').classList.remove('hidden');
                     document.getElementById('placeholder').classList.add('hidden');
                 }
                 reader.readAsDataURL(input.files[0]);
             }
         }
 
-        // ระบบวิเคราะห์ (Simulated AI)
         function runAnalysis() {
-            const nameInput = document.getElementById('plantName').value.trim();
-            const plantName = nameInput || "พืชทั่วไป (ไม่ระบุชื่อ)";
-            const btn = document.getElementById('btnAnalyze');
+            const cat = document.getElementById('plantCategory').value;
+            const typeIdx = document.getElementById('plantType').value;
+            if (!cat || typeIdx === "") return alert("เลือกพืชก่อนครับ");
 
-            // แสดงสถานะโหลดบน iPad
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังประมวลผลข้อมูล...';
-            btn.disabled = true;
+            const selected = plantData[cat][typeIdx];
+            document.getElementById('inputSection').classList.add('hidden');
+            document.getElementById('resultSection').classList.remove('hidden');
             
-            setTimeout(() => {
-                document.getElementById('inputSection').classList.add('hidden');
-                document.getElementById('resultSection').classList.remove('hidden');
-                
-                // ตั้งค่าวันที่ปัจจุบัน
-                const options = { day: 'numeric', month: 'long', year: 'numeric' };
-                document.getElementById('currentDate').innerText = new Date().toLocaleDateString('th-TH', options);
-                
-                updateResults(plantName);
-                
-                btn.innerHTML = '<i class="fas fa-microscope"></i> เริ่มการวิเคราะห์';
-                btn.disabled = false;
-            }, 1500);
+            document.getElementById('outPlantTitle').innerText = selected.name;
+            document.getElementById('outDisease').innerText = selected.disease;
+            document.getElementById('outShort').innerText = selected.short;
+            document.getElementById('outLong').innerText = selected.long;
+            document.getElementById('outDate').innerText = "วันที่ตรวจ: " + new Date().toLocaleDateString('th-TH');
+            
+            const sev = Math.floor(Math.random() * 40) + 55;
+            document.getElementById('outSeverityText').innerText = sev + "%";
+            setTimeout(() => { document.getElementById('outBar').style.width = sev + "%"; }, 300);
         }
 
-        function updateResults(name) {
-            document.getElementById('outPlantName').innerText = name;
-            
-            // ข้อมูลจำลองการวิเคราะห์
-            const severity = 82; 
-            document.getElementById('outDiseaseName').innerText = "โรคใบจุดสีน้ำตาล (Leaf Spot)";
-            document.getElementById('outSeverityText').innerText = severity + '%';
-            document.getElementById('outSeverityBar').style.width = severity + '%';
-            
-            document.getElementById('treatShort').innerText = "ให้รีบตัดใบที่เป็นโรคออกและทำลายทิ้งทันที ห้ามนำไปทำปุ๋ยหมัก หากพบระบาดเกิน 30% ของต้น ให้พ่นสารคาร์เบนดาซิมตามอัตราส่วน";
-            document.getElementById('treatLong').innerText = "ปรับระยะห่างระหว่างต้นให้โปร่งขึ้นเพื่อให้อากาศถ่ายเท และงดการให้น้ำแบบพ่นฝอยในช่วงเย็นเพื่อลดความชื้นสะสมบนใบ";
-            
-            // เลื่อนหน้าจอขึ้นไปบนสุด
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // ระบบ PDF ที่รองรับ iPad (ใช้วิธีเปิด Blob URL)
         function downloadPDF() {
             const element = document.getElementById('pdfContent');
-            const plantName = document.getElementById('outPlantName').innerText;
-            
-            const opt = {
-                margin: [0.3, 0.3, 0.3, 0.3],
-                filename: `Report-${plantName}.pdf`,
-                image: { type: 'jpeg', quality: 1.0 },
-                html2canvas: { 
-                    scale: 3, // ความละเอียดสูง
-                    useCORS: true,
-                    letterRendering: true
-                },
-                jsPDF: { 
-                    unit: 'in', 
-                    format: 'a4', 
-                    orientation: 'portrait' 
-                }
-            };
-
-            // แสดง Loading ระหว่างสร้าง PDF
-            const originalText = event.target.innerHTML;
-            event.target.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังสร้างไฟล์...';
-
-            html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
-                // วิธีการส่งออกไฟล์ที่ Safari บน iPad ชอบที่สุด
-                const blobUrl = pdf.output('bloburl');
-                window.open(blobUrl, '_blank');
-                document.querySelector('button[onclick="downloadPDF()"]').innerHTML = '<i class="fas fa-file-export"></i> ส่งออก PDF';
-            });
+            html2pdf().from(element).set({
+                margin: 0.5,
+                filename: 'Report.pdf',
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            }).save();
         }
 
         function resetApp() {
             document.getElementById('resultSection').classList.add('hidden');
             document.getElementById('inputSection').classList.remove('hidden');
-            
-            // ล้างค่าข้อมูล
-            document.getElementById('plantName').value = "";
-            document.getElementById('imageUpload').value = "";
-            document.getElementById('imagePreview').src = "";
-            document.getElementById('imagePreview').classList.add('hidden');
-            document.getElementById('placeholder').classList.remove('hidden');
-            document.getElementById('outSeverityBar').style.width = '0%';
-            
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     </script>
 </body>
